@@ -2338,13 +2338,34 @@ addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse'){ sideMx = 
 document.addEventListener('mouseleave', () => { sideMx = sideMy = -1e4; sideUpd(); harrUpd(); });
 addEventListener('blur', () => { sideMx = sideMy = -1e4; sideUpd(); });
 $('#sideNext').addEventListener('click', () => $('#nextBtn').click());
-$('#nextX').addEventListener('click', () => { nextDismissed = true; $('#nextPop').classList.remove('on'); });
+function nextHide(){ nextDismissed = true; npUp = 0; const p = $('#nextPop'); p.classList.remove('on'); p.style.transform = ''; p.style.transition = ''; }
+$('#nextX').addEventListener('click', nextHide);
+/* 한 번 뜨면 위로 올려도 유지 · 닫은 뒤 위로 올렸다 다시 내리면 다시 뜸 */
+let npLastY = window.scrollY, npUp = 0;
 addEventListener('scroll', () => {
-  if (curPart < 0 || nextDismissed) return;
+  const y = window.scrollY, dy = y - npLastY; npLastY = y;
+  if (curPart < 0) return;
+  if (dy < 0){ npUp -= dy; if (nextDismissed && npUp > 40) nextDismissed = false; return; }
+  if (dy > 0) npUp = 0;
+  if (nextDismissed || $('#nextPop').classList.contains('on')) return;
   const btn = document.querySelector(`[data-view="part-${PARTS[curPart].no}"] .corebtn`);
-  if (!btn) return;
-  $('#nextPop').classList.toggle('on', btn.getBoundingClientRect().top < innerHeight - 20);
+  if (btn && btn.getBoundingClientRect().top < innerHeight - 20) $('#nextPop').classList.add('on');
 }, { passive: true });
+/* 팝업을 아래로 끌어내려 닫기 */
+(() => {
+  const p = $('#nextPop'); let sy = null, d = 0, moved = false;
+  p.addEventListener('touchstart', e => { sy = e.touches[0].clientY; d = 0; moved = false; p.style.transition = 'none'; }, { passive: true });
+  p.addEventListener('touchmove', e => {
+    if (sy == null) return; d = Math.max(0, e.touches[0].clientY - sy);
+    if (d > 6) moved = true;
+    if (moved){ e.preventDefault(); p.style.transform = `translate(-50%, ${d}px)`; }
+  }, { passive: false });
+  p.addEventListener('touchend', () => {
+    if (sy == null) return; sy = null; p.style.transition = '';
+    if (d > 50) nextHide(); else p.style.transform = '';
+  });
+  p.addEventListener('click', e => { if (moved){ e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+})();
 
 
 /* horizontal scroll arrows (PC) */
